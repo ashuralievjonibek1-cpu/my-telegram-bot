@@ -5,7 +5,7 @@ import instaloader
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
-TOKEN = "8605349177:AAEeycDsQGT1CpM95s6OBYcREAbZfFioZA4"
+TOKEN = "8605349177:AAH_V7xgvpAPueLDDWW8bZUoxPWXxiiTC98"
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
