@@ -8,8 +8,7 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Салом! Ба ман ссылкаи видеоро аз Instagram, TikTok ё YouTube фиристед. "
-        "Ман аудиои онро ба шумо ҳамчун файл мефиристам, то тавонед ба WhatsApp, Imo ва дигар чатҳо роҳ диҳед!"
+        "Хушомадед ба боти Джонибек! лутфан силкаро равон кунед"
     )
 
 async def handle_url(update: Update, context: ContextTypes.DEFAULT_TYPE):
