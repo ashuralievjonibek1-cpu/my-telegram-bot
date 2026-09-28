@@ -1,66 +1,72 @@
 import os
-import logging
 import asyncio
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import yt_dlp
 
-# Токени бехатар аз муҳити Render гирифта мешавад
-TOKEN = os.getenv("BOT_TOKEN")
-
-logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Салом! Ба ман пайванди (ссылка) видеоро фиристед, ман онро ба паёми овозӣ (.ogg) табдил медиҳам.")
+    await update.message.reply_text(
+        "Салом! Ба ман ссылкаи видеоро аз Instagram, TikTok ё YouTube фиристед. "
+        "Ман аудиои онро ба шумо ҳамчун файл мефиристам, то тавонед ба WhatsApp, Imo ва дигар чатҳо роҳ диҳед!"
+    )
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_url(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text.strip()
+    
     if not (url.startswith("http://") or url.startswith("https://")):
-        await update.message.reply_text("⚠️ Лутфан пайванди (ссылка) дурусти видеоро фиристед.")
+        await update.message.reply_text("Лутфан ссылкаи дуруст (соз)-ро фиристед!")
         return
 
-    msg = await update.message.reply_text("⏳ Видео боргирӣ ва ба паёми овозӣ табдил дода мешавад, лутфан сабр кунед...")
+    msg = await update.message.reply_text("⏳ Видео коркард шуда истодааст, чанд сония сабр кунед...")
 
-    output_filename = f"voice_{update.message.message_id}"
-    
     ydl_opts = {
         'format': 'bestaudio/best',
-        'outtmpl': output_filename,
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'vorbis',
-        }],
+        'outtmpl': 'audio_file.%(ext)s',
         'quiet': True,
+        'no_warnings': True,
     }
 
-    def download_audio():
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-
     try:
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, download_audio)
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, lambda: download_audio(url, ydl_opts))
+        
+        audio_filename = None
+        for file in os.listdir('.'):
+            if file.startswith("audio_file."):
+                audio_filename = file
+                break
 
-        ogg_file = f"{output_filename}.ogg"
-
-        if os.path.exists(ogg_file):
-            with open(ogg_file, 'rb') as voice:
-                await update.message.reply_voice(voice=voice)
-            os.remove(ogg_file)
+        if audio_filename and os.path.exists(audio_filename):
+            with open(audio_filename, 'rb') as audio:
+                await update.message.reply_audio(
+                    audio=audio,
+                    caption="🎵 Аудио тайёр шуд!\n\n📲 Барои фиристодан ба WhatsApp ё Imo: дар канори файл тугмаи се нуқта ё «Share / Поделиться»-ро пахш карда, WhatsApp ё Imo-ро интихоб кунед."
+                )
+            os.remove(audio_filename)
             await msg.delete()
         else:
-            await msg.edit_text("❌ Хатогӣ: Файли овозӣ сохта нашуд.")
+            await msg.edit_text("❌ Аудио ёфт нашуд. Линкро тафтиш кунед.")
 
     except Exception as e:
-        logging.error(f"Error: {e}")
-        await msg.edit_text("❌ Хатогӣ ҳангоми коркарди видео. Санҷед, ки пайванд дуруст аст ё не.")
+        await msg.edit_text("❌ Хатогӣ ҳангоми боргирӣ. Ссылкаро тафтиш кунед ё баъдтар ҳаракат кунед.")
 
-if __name__ == '__main__':
-    if not TOKEN:
-        print("ERROR: BOT_TOKEN пайдо нашуд! Онро дар Render Environment Variables гузоред.")
-    else:
-        app = ApplicationBuilder().token(TOKEN).build()
-        app.add_handler(CommandHandler("start", start))
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-        print("Бот ба кор даромад...")
-        app.run_polling()
+def download_audio(url, opts):
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        ydl.download([url])
+
+def main():
+    if not BOT_TOKEN:
+        print("BOT_TOKEN ёфт нашуд!")
+        return
+
+    app = Application.builder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_url))
+
+    print("Бот фаъол шуд...")
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()
